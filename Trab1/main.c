@@ -6,6 +6,61 @@
 
 #define MAX_STR 81
 #define MAX_NUM 4
+#define PAR_ESQ -3
+#define PAR_DIR -2
+#define OP -1
+#define INT 0
+#define AD_SUB 1
+#define MULT_DIV 2
+
+
+/* Cria token da expressão = números, +, -, *, /, ( e ) */
+typedef struct token
+{
+    int tipo, prioridade, num;
+    char op;
+} Token;
+
+Token* token_cria(int tipo, void *info)
+{
+    Token *t = (Token*)malloc(sizeof(Token));
+    if (t == NULL) aborta("Erro de alocacao dinamica do token\n");
+
+    t->prioridade = INT;
+    t->tipo = tipo;
+    if (tipo){ //Operador
+        char c = *((char*)info);
+        switch (c){
+            case '+':
+                t->prioridade = AD_SUB;
+                break;
+            case '-':
+                t->prioridade = AD_SUB;
+                break;
+            case '*':
+                t->prioridade = MULT_DIV;
+                break;
+            case '/':
+                t->prioridade = MULT_DIV;
+                break;
+            case '(':
+                break;
+            case ')':
+                break;
+            default:
+                printf("%c - ",c);
+                aborta("Símbolo invalido\n");
+        }
+        t->num = 0;
+        t->op = c;
+    }
+    else
+    {
+        t->op = 0;
+        t->num = *((int*)info);
+    }
+    return t;
+}
 
 void stack_from_str(char *s, Pilha *p)
 {
@@ -13,26 +68,23 @@ void stack_from_str(char *s, Pilha *p)
     if (s[0]>='0' && s[0]<='9')
     {
         int i;
-        for (i = 0; s[i]>='0' && s[i]<='9'; i++);
+        for (i = 0; s[i]>='0' && s[i]<='9'; i++); //i = qte de algarismos do número
 
         if (strlen(s)>i) stack_from_str(s+i, p);
         
         char *aux = (char*)malloc(i+1);
-        int *num = (int*)malloc(sizeof(int));
-        *num = atoi(strncpy(aux, s, i));
-        pilha_push(p, INT, num);
+        int num = atoi(strncpy(aux, s, i));
+        pilha_push(p, token_cria(INT, &num));
         free(aux);
     }
     else if (s[0] != ' ')
     { //Cada token pode ser separado por ' '
-    
         stack_from_str(s+1, p);
-        int tipo = OP;
-        char* c = (char*)malloc(sizeof(char));
-        *c = s[0];
-        if (*c == '(') tipo = PAR_ESQ;
-        else if (*c == ')') tipo = PAR_DIR;
-        pilha_push(p, tipo, c);
+        int tipo;
+        if (s[0] == '(') tipo = PAR_ESQ;
+        else if (s[0] == ')') tipo = PAR_DIR;
+        else tipo = OP;
+        pilha_push(p, token_cria(tipo, &s[0]));
     }
     else stack_from_str(s+1, p);
 }
@@ -130,6 +182,8 @@ char* ShuntingYard(char* s)
     
     char *postfix = (char*)malloc(tam+1);
     str_from_stack(postfix, output);
+    pilha_libera(input);
+    pilha_libera(operator);
     return postfix;
 }
 
@@ -141,7 +195,7 @@ int main(void){
     Pilha *p = pilha_cria();
     stack_from_str(s, p);
 
-    out = ShuntingYard(s);
-    printf("%s\n", out);
+    //out = ShuntingYard(s);
+    //printf("%s\n", out);
     return 0;
 }
