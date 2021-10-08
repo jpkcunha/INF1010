@@ -1,4 +1,8 @@
 typedef struct pilha Pilha;
+static const int OP = -1;
+static const int INT = 0;
+static const int AD_SUB = 1;
+static const int MULT_DIV = 2;
 
 void aborta(char* s);
 

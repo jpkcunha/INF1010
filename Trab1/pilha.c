@@ -2,14 +2,16 @@
 #include <stdlib.h>
 #include "pilha.h"
 
-#define INT 1
-#define OP 2
-#define PARENT 3
-
+/*
+#define OP -1
+#define INT 0
+#define AD_SUB 1
+#define MULT_DIV 2
+*/
 
 typedef struct elemento {
     void* info;
-    int tipo;
+    int tipo, prioridade;
     struct elemento* prox;
 } Elemento;
 
@@ -36,11 +38,32 @@ int pilha_vazia(Pilha* p){
 
 void pilha_push(Pilha* p, int tipo, void* x){
     Elemento* novo = (Elemento*)malloc(sizeof(Elemento));
-    if (novo == NULL) aborta("Erro de alocacao dinamica do novo elemento da pilha\n");
+    if (novo == NULL) aborta("Erro de alocacao dinamica do elemento\n");
 
+    novo->prioridade = INT;
+    if (tipo==2){
+        switch (*((char*)x)){
+            case '+':
+                novo->prioridade = AD_SUB;
+                break;
+            case '-':
+                novo->prioridade = AD_SUB;
+                break;
+            case '*':
+                novo->prioridade = MULT_DIV;
+                break;
+            case '/':
+                novo->prioridade = MULT_DIV;
+                break;
+            default:
+                aborta("Símbolo invalido\n");
+        }
+    }
+    novo->tipo = tipo;
     novo->info = x;
     novo->prox = p->topo;
     p->topo = novo;
+    printf("Push successful - %d\n", tipo);
 }
 
 void* pilha_pop(Pilha* p){
@@ -52,7 +75,7 @@ void* pilha_pop(Pilha* p){
     val = t->info;
     p->topo = t->prox;
 
-    free(t->info);
+    //free(t->info);
     free(t);
 
     return val;
