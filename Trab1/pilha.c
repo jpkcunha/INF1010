@@ -2,18 +2,12 @@
 #include <stdlib.h>
 #include "pilha.h"
 
-/*
-#define OP -1
-#define INT 0
-#define AD_SUB 1
-#define MULT_DIV 2
-*/
-
 typedef struct elemento {
     void* info;
     int tipo, prioridade;
     struct elemento* prox;
 } Elemento;
+
 
 struct pilha{
     Elemento *topo;
@@ -36,13 +30,16 @@ int pilha_vazia(Pilha* p){
     return (p->topo == NULL);
 }
 
+
 void pilha_push(Pilha* p, int tipo, void* x){
     Elemento* novo = (Elemento*)malloc(sizeof(Elemento));
     if (novo == NULL) aborta("Erro de alocacao dinamica do elemento\n");
 
     novo->prioridade = INT;
-    if (tipo==2){
-        switch (*((char*)x)){
+    novo->tipo = tipo;
+    if (tipo){
+        char c = *((char*)x);
+        switch (c){
             case '+':
                 novo->prioridade = AD_SUB;
                 break;
@@ -55,32 +52,38 @@ void pilha_push(Pilha* p, int tipo, void* x){
             case '/':
                 novo->prioridade = MULT_DIV;
                 break;
+            case '(':
+                break;
+            case ')':
+                break;
             default:
+                printf("%c - ",c);
                 aborta("Símbolo invalido\n");
         }
     }
-    novo->tipo = tipo;
     novo->info = x;
     novo->prox = p->topo;
     p->topo = novo;
-    printf("Push successful - %d\n", tipo);
 }
 
-void* pilha_pop(Pilha* p){
+void* pilha_pop(Pilha* p, int* tipo, int *prioridade)
+{
     Elemento* t;
     void* val;
-    if (pilha_vazia) aborta("Pilha vazia\n");
+    if (pilha_vazia(p)) aborta("Pilha vazia\n");
 
     t = p->topo;
+    *tipo = t->tipo;
+    *prioridade = t->prioridade;
     val = t->info;
     p->topo = t->prox;
 
     //free(t->info);
     free(t);
-
-    return val;
+    return val;    
 }
 
-void pilha_libera(Pilha* p){
+void pilha_libera(Pilha* p)
+{
     free(p);
 }
