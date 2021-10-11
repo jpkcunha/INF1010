@@ -21,6 +21,11 @@ typedef struct token
     char op;
 } Token;
 
+void exibe(Token* t)
+{
+    printf("Criou: %d - %d - %d - %c\n", t->tipo, t->prioridade, t->num, t->op);
+}
+
 Token* token_cria(int tipo, void *info)
 {
     Token *t = (Token*)malloc(sizeof(Token));
@@ -59,6 +64,7 @@ Token* token_cria(int tipo, void *info)
         t->op = 0;
         t->num = *((int*)info);
     }
+    //exibe(t);
     return t;
 }
 
@@ -93,26 +99,28 @@ void str_from_stack(char *s, Pilha *p)
 {
     while(!pilha_vazia(p))
     {
-        int tipo, prioridade;
-        char* aux;
-        void* elem = pilha_pop(p, &tipo, &prioridade);
+        char *aux;
+        Token *t = (Token*)pilha_pop(p);
         str_from_stack(s, p);
-        if (tipo == INT)
+        if (t->tipo == INT)
         {
-            int tam, x = *((int*)elem);
-            tam = (int)log10(x) + 2;
+            int tam = (int)log10(t->num) + 2;
             aux = (char*)malloc(tam); //Tamanho = número de algarismos + 1
-            snprintf(aux, tam,"%d",x);
+            snprintf(aux, tam,"%d",t->num);
         }
         else
         {
-            char *x = (char*)elem;
-            aux = (char*)malloc(1);
-            strcpy(aux, x);
+            aux = (char*)malloc(2);
+            strcpy(aux, &(t->op));
         }
+        if (strlen(s) != 0) strcat(s, " ");
+        printf("String antes: %s\n", s);
         strcat(s, aux);
-        free(elem);
+        printf("Concatenou str %s\n", aux);
+        free(t); //Libera o token após salvá-lo na string
+        printf("Liberou token\n");
         free(aux);
+        printf("Liberou aux\n");
     }
 }
 
@@ -120,70 +128,86 @@ char* ShuntingYard(char* s)
 {
     //Inicializa as pilhas
     Pilha *input, *operator, *output;
-    int t1, p1, t2, p2, tam = 0;
-    void *elem, *op;
+    int tam = 0;
+    Token *t1, *t2;
 
     input = pilha_cria();
     operator = pilha_cria();
     output = pilha_cria();
     stack_from_str(s, input);
+    printf("Input feito: %s\n", s);
 
     while (!pilha_vazia(input))
     {
-        elem = pilha_pop(input, &t1, &p1);
-        //switch (t1){
-        if (t1 == INT)
+        t1 = (Token*)pilha_pop(input);
+        if (t1->tipo == INT)
         {
-            pilha_push(output, t1, elem);
+            pilha_push(output, t1);
             tam++;
+            printf("%d - Input --> output\n", tam);
+            exibe(t1);
         }
-        else if (t1 == OP)
+        else if (t1->tipo == OP)
         {
             if (!pilha_vazia(operator))
             {
-                op = pilha_pop(operator, &t2, &p2);
-                while(!pilha_vazia(operator) && t2 == OP && p2 >= p1)
+                t2 = (Token*)pilha_pop(operator);
+                while((t2->tipo == OP) && (t2->prioridade >= t1->prioridade))
                 {
-                    pilha_push(output, t2, op);
+                    pilha_push(output, t2);
                     tam++;
-                    op = pilha_pop(operator, &t2, &p2);
+                    printf("%d - Operator --> output\n", tam);
+                    exibe(t2);
+                    if (pilha_vazia(operator)) break;
+                    t2 = (Token*)pilha_pop(operator);
                 }
-                pilha_push(operator, t2, op);
+                pilha_push(operator, t2);
             }
-            pilha_push(operator, t1, elem);
+            pilha_push(operator, t1);
+            printf("%d - Input --> operator\n", tam);
+            exibe(t1);
         }
-        else if (t1 == PAR_ESQ)
+        else if (t1->tipo == PAR_ESQ)
         {
-            pilha_push(operator, t1, elem);
+            pilha_push(operator, t1);
+            printf("%d - Input --> operator PAR_ESQ\n", tam);
+            exibe(t1);
         }
-        else if (t1 == PAR_DIR)
+        else if (t1->tipo == PAR_DIR)
         {
+            printf("%d - PAR_DIR\n", tam);
             if (pilha_vazia(operator)) aborta("A expressão inserida está desbalanceada\n");
 
-            op = pilha_pop(operator, &t2, &p2);
-            while(t2 != PAR_ESQ)
+            t2 = (Token*)pilha_pop(operator);
+            while(t2->tipo != PAR_ESQ)
             {
                 if (pilha_vazia(operator)) aborta("A expressão inserida está desbalanceada\n");
-                pilha_push(output, t2, op);
-                op = pilha_pop(operator, &t2, &p2);
+                pilha_push(output, t2);
+                tam++;
+                printf("%d - Operator --> output\n", tam);
+                exibe(t2);
+                t2 = (Token*)pilha_pop(operator);
             }
-            free(elem);
-            free(op);
         }
         else aborta("Símbolo inválido\n");
     }
 
     while (!pilha_vazia(operator))
     {
-        op = pilha_pop(operator, &t1, &p1);
-        if (t1 == PAR_ESQ) aborta("A expressão inserida está desbalanceada\n");
-        pilha_push(output, t1, op);
+        t1 = (Token*)pilha_pop(operator);
+        if (t1->tipo == PAR_ESQ) aborta("A expressão inserida está desbalanceada\n");
+        pilha_push(output, t1);
+        tam++;
+        printf("%d - Operator --> output\n", tam);
+        exibe(t1);
     }
     
-    char *postfix = (char*)malloc(tam+1);
+    char *postfix = (char*)malloc(2*tam+1);
+    strcpy(postfix, "");
     str_from_stack(postfix, output);
     pilha_libera(input);
     pilha_libera(operator);
+    pilha_libera(output);
     return postfix;
 }
 
@@ -192,10 +216,8 @@ int main(void){
     char s[MAX_STR], *out;
     printf("Insira a expressão contendo números inteiros e as operações + - * /:\n");
     scanf("%[^\n]", s);
-    Pilha *p = pilha_cria();
-    stack_from_str(s, p);
-
-    //out = ShuntingYard(s);
-    //printf("%s\n", out);
+    out = ShuntingYard(s);
+    printf("%s\n", out);
+    free(out);
     return 0;
 }
