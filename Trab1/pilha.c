@@ -14,17 +14,16 @@ struct pilha
     Elemento *topo;
 };
 
-void aborta(char* s)
-{
-    printf("%s",s);
-    exit(1);
-}
 
 
 Pilha* pilha_cria(void)
 {
     Pilha* p = (Pilha*)malloc(sizeof(Pilha));
-    if (p == NULL) aborta("Erro de alocacao dinamica da pilha\n");
+    if (p == NULL) 
+    {
+        printf("Erro de alocacao dinamica da pilha\n");
+        exit(1);
+    }
     p->topo = NULL;
     return p;
 }
@@ -38,7 +37,11 @@ int pilha_vazia(Pilha* p)
 void pilha_push(Pilha* p, void* info)
 {
     Elemento* novo = (Elemento*)malloc(sizeof(Elemento));
-    if (novo == NULL) aborta("Erro de alocacao dinamica do elemento\n");
+    if (novo == NULL)
+    {
+        printf("Erro de alocacao dinamica do elemento\n");
+        exit(1);
+    }
     novo->info = info;
     novo->prox = p->topo;
     p->topo = novo;
@@ -48,7 +51,11 @@ void* pilha_pop(Pilha* p)
 {
     Elemento* t;
     void* val;
-    if (pilha_vazia(p)) aborta("Pilha vazia\n");
+    if (pilha_vazia(p))
+    {
+        printf("Pilha vazia\n");
+        exit(1);
+    }
     t = p->topo;
     val = t->info;
     p->topo = t->prox;
@@ -58,5 +65,12 @@ void* pilha_pop(Pilha* p)
 
 void pilha_libera(Pilha* p)
 {
+    Elemento *t, *q = p->topo;
+    while (q != NULL)
+    {
+        t = q->prox;
+        free(q);
+        q = t;
+    }
     free(p);
 }

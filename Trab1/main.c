@@ -3,97 +3,61 @@
 #include <stdlib.h>
 #include <math.h>
 #include "pilha.h"
-
-#define MAX_STR 81
-#define MAX_NUM 4
-#define PAR_ESQ -3
-#define PAR_DIR -2
-#define OP -1
-#define INT 0
-#define AD_SUB 1
-#define MULT_DIV 2
+#include "info.h"
+#include "arvBin.h"
 
 
-/* Cria token da expressão = números, +, -, *, /, ( e ) */
-typedef struct token
+
+
+Pilha* stack_from_str(char *s)
 {
-    int tipo, prioridade, num;
-    char op;
-} Token;
+    Pilha *p = pilha_cria();
+    int cont = 0;
+    while (s[0] != '\0')
+    {
+        //printf("%d - leu %c\n", cont, s[0]);
+        if (s[0]>='0' && s[0]<='9')
+        {
+            int i;
+            for (i = 0; s[i]>='0' && s[i]<='9'; i++); //i = qte de algarismos do número
 
-void exibe(Token* t)
-{
-    printf("Criou: %d - %d - %d - %c\n", t->tipo, t->prioridade, t->num, t->op);
-}
+            //Cria número a partir da string
+            char *aux = (char*)malloc(i+1);
+            int num = atoi(strncpy(aux, s, i));
+            //printf("-> Num: %d\n", num);
 
-Token* token_cria(int tipo, void *info)
-{
-    Token *t = (Token*)malloc(sizeof(Token));
-    if (t == NULL) aborta("Erro de alocacao dinamica do token\n");
+            //Coloca na pilha
+            pilha_push(p, token_cria(INT, &num));
+            free(aux);
 
-    t->prioridade = INT;
-    t->tipo = tipo;
-    if (tipo){ //Operador
-        char c = *((char*)info);
-        switch (c){
-            case '+':
-                t->prioridade = AD_SUB;
-                break;
-            case '-':
-                t->prioridade = AD_SUB;
-                break;
-            case '*':
-                t->prioridade = MULT_DIV;
-                break;
-            case '/':
-                t->prioridade = MULT_DIV;
-                break;
-            case '(':
-                break;
-            case ')':
-                break;
-            default:
-                printf("%c - ",c);
-                aborta("Símbolo invalido\n");
+            if (strlen(s)>i) s += i; // Se o número for a última coisa da string
+            else s += 1;
+            cont ++;
         }
-        t->num = 0;
-        t->op = c;
+        else if (s[0] != ' ')
+        { //Cada token pode ser separado por ' '
+            
+            char c = s[0];
+            //printf("-> Op: %c\n", c);
+            int tipo;
+            if (s[0] == '(') tipo = PAR_ESQ;
+            else if (s[0] == ')') tipo = PAR_DIR;
+            else tipo = OP;
+            pilha_push(p, token_cria(tipo, &s[0]));
+            s += 1;
+            cont ++;
+        }
+        else s += 1;
     }
-    else
-    {
-        t->op = 0;
-        t->num = *((int*)info);
-    }
-    //exibe(t);
-    return t;
+
+    Pilha *final = pilha_cria();
+    while (!pilha_vazia(p)) pilha_push(final, pilha_pop(p));
+    //printf("\n->Criou pilha\n\n");
+    pilha_libera(p);
+    return final;
+
 }
 
-void stack_from_str(char *s, Pilha *p)
-{
-    if (s[0] == '\0') return;
-    if (s[0]>='0' && s[0]<='9')
-    {
-        int i;
-        for (i = 0; s[i]>='0' && s[i]<='9'; i++); //i = qte de algarismos do número
-
-        if (strlen(s)>i) stack_from_str(s+i, p);
-        
-        char *aux = (char*)malloc(i+1);
-        int num = atoi(strncpy(aux, s, i));
-        pilha_push(p, token_cria(INT, &num));
-        free(aux);
-    }
-    else if (s[0] != ' ')
-    { //Cada token pode ser separado por ' '
-        stack_from_str(s+1, p);
-        int tipo;
-        if (s[0] == '(') tipo = PAR_ESQ;
-        else if (s[0] == ')') tipo = PAR_DIR;
-        else tipo = OP;
-        pilha_push(p, token_cria(tipo, &s[0]));
-    }
-    else stack_from_str(s+1, p);
-}
 
 void str_from_stack(char *s, Pilha *p)
 {
@@ -101,123 +65,274 @@ void str_from_stack(char *s, Pilha *p)
     {
         char *aux;
         Token *t = (Token*)pilha_pop(p);
+        //exibe(t);
+        //printf("\n");
         str_from_stack(s, p);
-        if (t->tipo == INT)
+        if (getTipo(t) == INT)
         {
-            int tam = (int)log10(t->num) + 2;
+            int tam = (int)log10(getNum(t)) + 2;
             aux = (char*)malloc(tam); //Tamanho = número de algarismos + 1
-            snprintf(aux, tam,"%d",t->num);
+            snprintf(aux, tam,"%d",getNum(t));
+            //printf("aux = '%s'\n", aux);
         }
         else
         {
             aux = (char*)malloc(2);
-            strcpy(aux, &(t->op));
+            snprintf(aux, 2,"%c",getOp(t));
+            //printf("aux = '%s'\n", aux);
         }
         if (strlen(s) != 0) strcat(s, " ");
-        printf("String antes: %s\n", s);
         strcat(s, aux);
-        printf("Concatenou str %s\n", aux);
         free(t); //Libera o token após salvá-lo na string
-        printf("Liberou token\n");
         free(aux);
-        printf("Liberou aux\n");
     }
+    return;
 }
 
-char* ShuntingYard(char* s)
+
+Pilha* ShuntingYard(char* s)
 {
     //Inicializa as pilhas
     Pilha *input, *operator, *output;
     int tam = 0;
     Token *t1, *t2;
 
-    input = pilha_cria();
+    input = stack_from_str(s);
     operator = pilha_cria();
     output = pilha_cria();
-    stack_from_str(s, input);
-    printf("Input feito: %s\n", s);
-
+    
     while (!pilha_vazia(input))
     {
         t1 = (Token*)pilha_pop(input);
-        if (t1->tipo == INT)
+        if (getTipo(t1) == INT)
         {
             pilha_push(output, t1);
             tam++;
-            printf("%d - Input --> output\n", tam);
-            exibe(t1);
         }
-        else if (t1->tipo == OP)
+        else if (getTipo(t1) == OP)
         {
             if (!pilha_vazia(operator))
             {
                 t2 = (Token*)pilha_pop(operator);
-                while((t2->tipo == OP) && (t2->prioridade >= t1->prioridade))
+                int cont = tam;
+                while((getTipo(t2) == OP) && (getPrioridade(t2) >= getPrioridade(t1)))
                 {
                     pilha_push(output, t2);
                     tam++;
-                    printf("%d - Operator --> output\n", tam);
-                    exibe(t2);
                     if (pilha_vazia(operator)) break;
                     t2 = (Token*)pilha_pop(operator);
                 }
-                pilha_push(operator, t2);
+                if (cont == tam || getTipo(t2) == PAR_ESQ) //Condições para recolocar na pilha operator
+                {
+                    pilha_push(operator, t2);
+                }
             }
             pilha_push(operator, t1);
-            printf("%d - Input --> operator\n", tam);
-            exibe(t1);
         }
-        else if (t1->tipo == PAR_ESQ)
+        else if (getTipo(t1) == PAR_ESQ)
         {
             pilha_push(operator, t1);
-            printf("%d - Input --> operator PAR_ESQ\n", tam);
-            exibe(t1);
         }
-        else if (t1->tipo == PAR_DIR)
+        else if (getTipo(t1) == PAR_DIR)
         {
-            printf("%d - PAR_DIR\n", tam);
-            if (pilha_vazia(operator)) aborta("A expressão inserida está desbalanceada\n");
+            if (pilha_vazia(operator)) 
+                {
+                    printf("A expressão inserida está desbalanceada\n");
+                    exit(1);
+                }
 
             t2 = (Token*)pilha_pop(operator);
-            while(t2->tipo != PAR_ESQ)
+            while(getTipo(t2) != PAR_ESQ)
             {
-                if (pilha_vazia(operator)) aborta("A expressão inserida está desbalanceada\n");
+                if (pilha_vazia(operator)) //Falta um '('
+                {
+                    printf("A expressão inserida está desbalanceada\n");
+                    exit(1);
+                }
                 pilha_push(output, t2);
                 tam++;
-                printf("%d - Operator --> output\n", tam);
-                exibe(t2);
                 t2 = (Token*)pilha_pop(operator);
             }
         }
-        else aborta("Símbolo inválido\n");
+        else
+        {
+            printf("Símbolo inválido - %c\n", getOp(t1));
+            exit(1);
+        }
     }
-
+    
     while (!pilha_vazia(operator))
     {
         t1 = (Token*)pilha_pop(operator);
-        if (t1->tipo == PAR_ESQ) aborta("A expressão inserida está desbalanceada\n");
+        
+        if (getTipo(t1) == PAR_ESQ) //Falta um ')'
+        {
+            printf("A expressão inserida está desbalanceada\n");
+            exit(1);
+        }
+        
         pilha_push(output, t1);
         tam++;
-        printf("%d - Operator --> output\n", tam);
-        exibe(t1);
     }
     
-    char *postfix = (char*)malloc(2*tam+1);
-    strcpy(postfix, "");
-    str_from_stack(postfix, output);
     pilha_libera(input);
     pilha_libera(operator);
-    pilha_libera(output);
-    return postfix;
+    
+    return output;
 }
 
+
+NoArv* ArvoreExpressao(char *s)
+{
+    Pilha *p = pilha_cria();
+    NoArv *a;
+    int cont = 1;
+
+    while (s[0] != '\0')
+    {
+        //printf("%d - leu %c\n", cont, s[0]);
+        if (s[0]>='0' && s[0]<='9')
+        {
+            int i;
+            for (i = 0; s[i]>='0' && s[i]<='9'; i++); //i = qte de algarismos do número
+
+            char *aux = (char*)malloc(i+1);
+            int num = atoi(strncpy(aux, s, i));
+            //printf("-> Num: %d\n", num);
+            //Cria árvore com o token como raiz e insere no topo da pilha
+            a = arv_cria(token_cria(INT, &num), arv_criavazia(), arv_criavazia());
+            //arv_imprime(a);
+            //printf("\nCriou árvore de num\n");
+            pilha_push(p, a);
+            //printf("Push num successful\n");
+            free(aux);
+            
+            if (strlen(s)>i) s += i;
+            else s += 1;
+            cont += 1;
+        }
+        else if (s[0] != ' ')
+        { //Cada token pode ser separado por ' '
+            
+            char c = s[0];
+            //printf("-> Op: %c\n", c);
+            NoArv *sae, *sad;
+
+            sad = (NoArv*)pilha_pop(p);
+            sae = (NoArv*)pilha_pop(p);
+            a = arv_cria(token_cria(OP, &c), sae, sad);
+            //a = arv_cria(token_cria(OP, &c), arv_criavazia(), arv_criavazia());
+            //arv_imprime(a);
+            //printf("\nCriou árvore de op\n");
+            pilha_push(p, a);
+            //printf("Push op successful\n");
+            s += 1;
+            cont += 1;
+        }
+        else s += 1;
+    }
+    //printf("Saiu do while\n");
+    a = (NoArv*)pilha_pop(p);
+    pilha_libera(p);
+    return a;
+}
+
+
+
+//Tudo OK menos Shunting Yard - segmentation fault OK!
 
 int main(void){
-    char s[MAX_STR], *out;
-    printf("Insira a expressão contendo números inteiros e as operações + - * /:\n");
-    scanf("%[^\n]", s);
-    out = ShuntingYard(s);
-    printf("%s\n", out);
-    free(out);
+    
+    char *in[] ={"3 + 2 * 3",
+                 "10 * 2 - 2 * 5",
+                 "7 + 3 / 2",
+                 "2 * 6 + 3 / 8",
+                 "2 + (3 * (8 - 4))",
+                 "18 / 2 * 5 + 6 - 4",
+                 "3 + (16 - 4 * 3) - 6 / 2",
+                 "(2 - 3 + 1) / (2 - 2)",
+                 "((18 + 3 * 2) / 8 + 5 * 3) / 6",
+                 "16 / 4 * (4)"};
+  
+    
+    for (int i = 0; i<10; i++) {
+        printf("Infix: %s\n", in[i]);
+        Pilha *p = ShuntingYard(in[i]);
+        
+        char *out = (char*)malloc(MAX_STR);
+        str_from_stack(out, p);
+        printf("Postfix: '%s'\n", out);
+
+        NoArv* a = ArvoreExpressao(out);
+        arv_imprime(a);
+        printf("\nResultado: %d\n\n", arv_calcula(a));    
+
+        arv_libera(a);
+        free(out);
+        pilha_libera(p);
+    }
+
+    printf("Feito!\n");
     return 0;
 }
+
+/*
+int main(void){
+    
+    char *in[] ={"3 + (16 - 4 * 3) - 6 / 2",
+                 "((18 + 3 * 2) / 8 + 5 * 3) / 6",
+                 "16 / 4 * (4)"};
+  
+    
+    for (int i = 0; i<3; i++) {
+        printf("Infix: %s\n", in[i]);
+        Pilha *p = ShuntingYard(in[i]);
+        
+        char *out = (char*)malloc(MAX_STR);
+        str_from_stack(out, p);
+        printf("Postfix: '%s'\n", out);
+
+        //NoArv* a = ArvoreExpressao(out);
+        //arv_imprime(a);
+        //printf("\nResultado: %d\n\n", arv_calcula(a));    
+
+        //arv_libera(a);
+        free(out);
+        pilha_libera(p);
+    }
+
+    printf("Feito!\n");
+    return 0;
+}*/
+
+//stack_to_str e str_to_stack OK
+/*
+int main(void){
+    
+    
+    char *infix[] = {"3 + 2 * 3",
+                 "10 * 2 - 2 * 5",
+                 "7 + 3 / 2",
+                 "2 * 6 + 3 / 8",
+                 "2 + (3 * (8 - 4))",
+                 "18 / 2 * 5 + 6 - 4",
+                 "3 + (16 - 4 * 3) - 6 / 2",
+                 "(2 - 3 + 1) / (2 - 2)",
+                 "((18 + 3 * 2) / 8 + 5 * 3) / 6",
+                 "16 / 4 * (4)"};
+    
+    for (int i = 0; i<10; i++)
+    {
+        printf("%s\n", infix[i]);
+        Pilha *p = stack_from_str(infix[i]);
+        
+        char out[MAX_STR];
+        str_from_stack(out, p);
+        printf("out ==> %s\n", out);
+
+        pilha_libera(p);
+    }
+
+    return 0;
+}*/
+
