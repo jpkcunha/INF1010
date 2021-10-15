@@ -7,8 +7,6 @@
 #include "arvBin.h"
 
 
-
-
 Pilha* stack_from_str(char *s)
 {
     Pilha *p = pilha_cria();
@@ -238,9 +236,6 @@ NoArv* ArvoreExpressao(char *s)
 }
 
 
-
-//Tudo OK menos Shunting Yard - segmentation fault OK!
-
 int main(void){
     
     char *in[] ={"3 + 2 * 3",
@@ -275,64 +270,3 @@ int main(void){
     printf("Feito!\n");
     return 0;
 }
-
-/*
-int main(void){
-    
-    char *in[] ={"3 + (16 - 4 * 3) - 6 / 2",
-                 "((18 + 3 * 2) / 8 + 5 * 3) / 6",
-                 "16 / 4 * (4)"};
-  
-    
-    for (int i = 0; i<3; i++) {
-        printf("Infix: %s\n", in[i]);
-        Pilha *p = ShuntingYard(in[i]);
-        
-        char *out = (char*)malloc(MAX_STR);
-        str_from_stack(out, p);
-        printf("Postfix: '%s'\n", out);
-
-        //NoArv* a = ArvoreExpressao(out);
-        //arv_imprime(a);
-        //printf("\nResultado: %d\n\n", arv_calcula(a));    
-
-        //arv_libera(a);
-        free(out);
-        pilha_libera(p);
-    }
-
-    printf("Feito!\n");
-    return 0;
-}*/
-
-//stack_to_str e str_to_stack OK
-/*
-int main(void){
-    
-    
-    char *infix[] = {"3 + 2 * 3",
-                 "10 * 2 - 2 * 5",
-                 "7 + 3 / 2",
-                 "2 * 6 + 3 / 8",
-                 "2 + (3 * (8 - 4))",
-                 "18 / 2 * 5 + 6 - 4",
-                 "3 + (16 - 4 * 3) - 6 / 2",
-                 "(2 - 3 + 1) / (2 - 2)",
-                 "((18 + 3 * 2) / 8 + 5 * 3) / 6",
-                 "16 / 4 * (4)"};
-    
-    for (int i = 0; i<10; i++)
-    {
-        printf("%s\n", infix[i]);
-        Pilha *p = stack_from_str(infix[i]);
-        
-        char out[MAX_STR];
-        str_from_stack(out, p);
-        printf("out ==> %s\n", out);
-
-        pilha_libera(p);
-    }
-
-    return 0;
-}*/
-
