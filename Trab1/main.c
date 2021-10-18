@@ -13,7 +13,6 @@ Pilha* stack_from_str(char *s)
     int cont = 0;
     while (s[0] != '\0')
     {
-        //printf("%d - leu %c\n", cont, s[0]);
         if (s[0]>='0' && s[0]<='9')
         {
             int i;
@@ -22,7 +21,6 @@ Pilha* stack_from_str(char *s)
             //Cria número a partir da string
             char *aux = (char*)malloc(i+1);
             int num = atoi(strncpy(aux, s, i));
-            //printf("-> Num: %d\n", num);
 
             //Coloca na pilha
             pilha_push(p, token_cria(INT, &num));
@@ -36,7 +34,6 @@ Pilha* stack_from_str(char *s)
         { //Cada token pode ser separado por ' '
             
             char c = s[0];
-            //printf("-> Op: %c\n", c);
             int tipo;
             if (s[0] == '(') tipo = PAR_ESQ;
             else if (s[0] == ')') tipo = PAR_DIR;
@@ -50,7 +47,6 @@ Pilha* stack_from_str(char *s)
 
     Pilha *final = pilha_cria();
     while (!pilha_vazia(p)) pilha_push(final, pilha_pop(p));
-    //printf("\n->Criou pilha\n\n");
     pilha_libera(p);
     return final;
 
@@ -63,21 +59,17 @@ void str_from_stack(char *s, Pilha *p)
     {
         char *aux;
         Token *t = (Token*)pilha_pop(p);
-        //exibe(t);
-        //printf("\n");
         str_from_stack(s, p);
         if (getTipo(t) == INT)
         {
             int tam = (int)log10(getNum(t)) + 2;
             aux = (char*)malloc(tam); //Tamanho = número de algarismos + 1
             snprintf(aux, tam,"%d",getNum(t));
-            //printf("aux = '%s'\n", aux);
         }
         else
         {
             aux = (char*)malloc(2);
             snprintf(aux, 2,"%c",getOp(t));
-            //printf("aux = '%s'\n", aux);
         }
         if (strlen(s) != 0) strcat(s, " ");
         strcat(s, aux);
@@ -184,11 +176,9 @@ NoArv* ArvoreExpressao(char *s)
 {
     Pilha *p = pilha_cria();
     NoArv *a;
-    int cont = 1;
 
     while (s[0] != '\0')
     {
-        //printf("%d - leu %c\n", cont, s[0]);
         if (s[0]>='0' && s[0]<='9')
         {
             int i;
@@ -196,40 +186,27 @@ NoArv* ArvoreExpressao(char *s)
 
             char *aux = (char*)malloc(i+1);
             int num = atoi(strncpy(aux, s, i));
-            //printf("-> Num: %d\n", num);
-            //Cria árvore com o token como raiz e insere no topo da pilha
             a = arv_cria(token_cria(INT, &num), arv_criavazia(), arv_criavazia());
-            //arv_imprime(a);
-            //printf("\nCriou árvore de num\n");
             pilha_push(p, a);
-            //printf("Push num successful\n");
             free(aux);
             
             if (strlen(s)>i) s += i;
             else s += 1;
-            cont += 1;
         }
         else if (s[0] != ' ')
         { //Cada token pode ser separado por ' '
             
             char c = s[0];
-            //printf("-> Op: %c\n", c);
             NoArv *sae, *sad;
 
             sad = (NoArv*)pilha_pop(p);
             sae = (NoArv*)pilha_pop(p);
             a = arv_cria(token_cria(OP, &c), sae, sad);
-            //a = arv_cria(token_cria(OP, &c), arv_criavazia(), arv_criavazia());
-            //arv_imprime(a);
-            //printf("\nCriou árvore de op\n");
             pilha_push(p, a);
-            //printf("Push op successful\n");
             s += 1;
-            cont += 1;
         }
         else s += 1;
     }
-    //printf("Saiu do while\n");
     a = (NoArv*)pilha_pop(p);
     pilha_libera(p);
     return a;
